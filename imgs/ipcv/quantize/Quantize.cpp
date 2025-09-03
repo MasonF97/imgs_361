@@ -33,28 +33,28 @@ static int _is_power_of_two(const int number) {
  *  \param[out] dst                destination cv:Mat of CV_8UC3
  */
 void Uniform(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {  
-
-  // Might be more efficent to just always use division
-
   // Check whether the quantization level number is a power of two
-  float quantization_denominator;
+  // Must be a float to avoid errors with odd quantization levels
+  float quantization_denominator = (256.0 / quantization_levels);
   if (_is_power_of_two(quantization_levels)){
     // Use bit shifting
-    uint8_t quantization_levels_log_2_int = static_cast<int>(log2(quantization_levels));
-    quantization_denominator = (256 >> quantization_levels_log_2_int);
+    uint8_t bit_shift = static_cast<int>(log2(quantization_denominator));
+    for (int r = 0; r < src.rows; r++) {
+      for (int c = 0; c < src.cols; c++) {
+        uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
+        uint8_t quantized_value = src_value >> bit_shift;
+        dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+      }
+    }
   }
   else{
     // Use division
-    // 256 must be a float so that a float is returned
-    quantization_denominator = (256.0 / quantization_levels);
-  }
-
-  // Go th
-  for (int r = 0; r < src.rows; r++) {
-    for (int c = 0; c < src.cols; c++) {
-      uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
-      uint8_t quantized_value = src_value / quantization_denominator;
-      dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+    for (int r = 0; r < src.rows; r++) {
+      for (int c = 0; c < src.cols; c++) {
+        uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
+        uint8_t quantized_value = src_value / quantization_denominator;
+        dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+      }
     }
   }
 }
@@ -68,13 +68,24 @@ void Uniform(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {
  */
 void Igs(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {
 
-  // Insert your code here
+  // NEED TO CHECK FOR OVERFLOWS
+
+  // Powers of 2
+  // Use bit shifting
+
+  // Division
+  // (DC + R) / (256/L) = DCnew
+  // If R + DC is over 256, don't add R
+  // DC % (256/L) = R
+  // 256 must be a float so that a float is returned
+  float quantization_denominator = (256.0 / quantization_levels);
+
+
+  if (_is_power_of_two(quantization_levels)){
+    quantization_denominator = 1;
+  }
 
 }
-
-// create a copy of this repo to use
-// fist get the env figured out
-// run it as is, to make sure everyhtong works
 
 
 // many functions

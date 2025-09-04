@@ -25,29 +25,24 @@ static int _is_power_of_two(const int number) {
   return log_2_double == log_2_int;
 }
 
-
-static void _transform_all_digital_counts_uniform(const cv::Mat& src, cv::Mat& dst, std::function<uint8_t(uint8_t)> transform) {
+/** Applies a transform lambda to each digital count in an image
+ *
+ *  \param[in] src         source cv::Mat of CV_8UC3
+ *  \param[out] dst        destination cv:Mat of CV_8UC3
+ *  \param[in] transform   a lambda that contains the calculations to 
+ *                         perfrom uniform or igs quantization on a digital count
+ */
+static void _transform_all_digital_counts(const cv::Mat& src, cv::Mat& dst, std::function<uint8_t(uint8_t)> transform) {
+  // Go through each digital count in the image
   for (int r = 0; r < src.rows; r++) {
     for (int c = 0; c < src.cols; c++) {
-      uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
-      uint8_t quantized_value = transform(src_value);
-      dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+      uint8_t src_digital_count = src.at<cv::Vec3b>(r, c)[0];
+      // Apply the transformation lambda to the digital count
+      uint8_t quantized_digital_count = transform(src_digital_count);
+      dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_digital_count, quantized_digital_count, quantized_digital_count);
     }
   }
 }
-
-// static void _transform_all_digital_counts_igs(const cv::Mat& src, cv::Mat& dst, std::function<int(int, uint8_t)> transform) {
-//   uint8_t remainder = 0;
-//   for (int r = 0; r < src.rows; r++) {
-//     for (int c = 0; c < src.cols; c++) {
-//       int src_value = src.at<cv::Vec3b>(r, c)[0];
-//       if 
-//       uint8_t quantized_value = transform(src_value, remainder);
-
-//       dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
-//     }
-//   }
-// }
 
 /** Perform uniform grey-level quantization on a color image
  *
@@ -56,26 +51,27 @@ static void _transform_all_digital_counts_uniform(const cv::Mat& src, cv::Mat& d
  *                                 the image
  *  \param[out] dst                destination cv:Mat of CV_8UC3
  */
-void Uniform(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {  
-  // Check whether the quantization level number is a power of two
+void Uniform(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {
+  std::function<uint8_t(uint8_t)> uniform_transform;
   // Must be a float to avoid errors with odd quantization levels
-  std::function<uint8_t(uint8_t)> transform;
   float quantization_denominator = (256.0 / quantization_levels);
+  // Check whether the quantization level number is a power of two
   if (_is_power_of_two(quantization_levels)){
-    // Use bit shifting
-    uint8_t bit_shift = static_cast<int>(log2(quantization_denominator));
-    transform = [bit_shift](int digital_count) {
-      return digital_count >> bit_shift;
+    // Determine the correct amount of bits to shift by
+    uint8_t bit_shift = static_cast<uint8_t>(log2(quantization_denominator));
+    // Create a lambda that uses bit shifting to perform uniform quantization
+    uniform_transform = [bit_shift](uint8_t src_digital_count) {
+      return src_digital_count >> bit_shift;
     };
   }
   else{
-    // Use division
-    transform = [quantization_denominator](int digital_count) {
-      return digital_count / quantization_denominator;
+    // Create a lambda that uses division to perform uniform quantization
+    uniform_transform = [quantization_denominator](uint8_t src_digital_count) {
+      return static_cast<uint8_t>(src_digital_count / quantization_denominator);
     };
   }
 
-  _transform_all_digital_counts_uniform(src, dst, transform);
+  _transform_all_digital_counts(src, dst, uniform_transform);
 }
 
 /** Perform improved grey scale quantization on a color image
@@ -86,71 +82,45 @@ void Uniform(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {
  *  \param[out] dst                destination cv:Mat of CV_8UC3
  */
 void Igs(const cv::Mat& src, const int quantization_levels, cv::Mat& dst) {
-
-  // NEED TO CHECK FOR OVERFLOWS
-
-  // Powers of 2
-  // Use bit shifting
-
-  // Division
-  // (DC + R) / (256/L) = DCnew
-  // If R + DC is over 256, don't add R
-  // DC % (256/L) = R
-  // 256 must be a float so that a float is returned
+  std::function<uint8_t(uint8_t)> igs_transform;
   float quantization_denominator = (256.0 / quantization_levels);
-
-
+  // Check if it's a power of 2
   if (_is_power_of_two(quantization_levels)){
-    uint8_t bit_shift = static_cast<int>(log2(quantization_denominator));
+    // Determine the correct amount of bits to shift by
+    uint8_t bit_shift = static_cast<uint8_t>(log2(quantization_denominator));
     uint8_t remainder = 0;
-    for (int r = 0; r < src.rows; r++) {
-      for (int c = 0; c < src.cols; c++) {
-        uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
-        // If adding the remainder would cause an overflow, make the remainder 0
-        if ((remainder + src_value) > 255){
-          remainder = 0;
-        }
-        // uint8_t quantized_value = transform(src_value, remainder);
-        uint8_t quantized_value = (src_value + remainder) >> bit_shift;
-        // Use the bitwise and operator to get the 4 least significant bits, which is the remainder
-        remainder = src_value & 0b00001111;
-        
-        dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+    // Create a lambda that uses bit shifting to perform IGS quantization
+    // Pass the remainder by reference so it can be modified
+    igs_transform = [bit_shift, &remainder](uint8_t src_digital_count) {
+      // If adding the remainder would cause an overflow, make the remainder 0
+      if ((remainder + src_digital_count) > 255){
+        remainder = 0;
       }
-    }
-    
+      src_digital_count = src_digital_count + remainder;
+      uint8_t quantized_digital_count = src_digital_count >> bit_shift;
+      // Use the bitwise and operator to get the remainder
+      remainder = src_digital_count & ((1 << bit_shift) - 1);
+      return quantized_digital_count;
+    };
   }
   else{
-    // Use division
     float remainder = 0;
-    for (int r = 0; r < src.rows; r++) {
-      for (int c = 0; c < src.cols; c++) {
-        uint8_t src_value = src.at<cv::Vec3b>(r, c)[0];
-        // If adding the remainder would cause an overflow, make the remainder 0
-        if ((remainder + src_value) > 255){
-          remainder = 0;
-        }
-        // uint8_t quantized_value = transform(src_value, remainder);
-        uint8_t quantized_value = (src_value + remainder) / quantization_denominator;
-        // Use fmod instead of modulo so it doesn't have to be an int
-        remainder = fmod(src_value, quantization_denominator);
-        
-        dst.at<cv::Vec3b>(r, c) = cv::Vec3b(quantized_value, quantized_value, quantized_value);
+    // Create a lambda that uses division to perform IGS quantization
+    // Pass the remainder by reference so it can be modified
+    igs_transform = [quantization_denominator, &remainder](uint8_t src_digital_count) {
+      // If adding the remainder would cause an overflow, make the remainder 0
+      if ((remainder + src_digital_count) > 255){
+        remainder = 0;
       }
-    }
+      float src_digital_count_float = src_digital_count + remainder;
+      uint8_t quantized_digital_count = static_cast<uint8_t>(src_digital_count_float / quantization_denominator);
+      // Use fmod instead of modulo so it doesn't have to be an int
+      remainder = fmod(src_digital_count_float, quantization_denominator);
+      return quantized_digital_count;
+    };
   }
-
+  _transform_all_digital_counts(src, dst, igs_transform);
 }
-
-
-// many functions
-// use a base 2 logarithm to check if it's a power of two
-// if it is a base 2 logarithmn use bit shifitng, otherwise use the method discussed in class
-// a Mat of CV_8UC3 is an array of digital counts
-// Only need to submit this Quantize.cpp file
-
-// Look in ipcv/utils/ApplyLut.cpp
-
 
 namespace ipcv {
 

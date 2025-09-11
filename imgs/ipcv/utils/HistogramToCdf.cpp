@@ -17,7 +17,13 @@ void HistogramToCdf(const cv::Mat& h, cv::Mat& cdf) {
 
   cdf.create(h.size(), CV_64F);
 
-  // Insert your code here
-
+  for (int channel = 0; channel < pdf.rows; channel++) {
+    double cumulative = 0.0;
+    for (int digital_count_percent = 0; digital_count_percent < pdf.cols; digital_count_percent++) {
+      // Update each value so that it represents the percentage up to that point
+      cumulative += pdf.at<double>(channel, digital_count_percent);
+      cdf.at<double>(channel, digital_count_percent) = cumulative;
+    }
+  }
 }
 }

@@ -16,7 +16,7 @@ using namespace std;
 namespace ipcv {
 
 // Return the index of the value closest to the target value in the row
-int findClosestIndexMat(const cv::Mat& row, float target_value) {
+int _find_closest_index_mat(const cv::Mat& row, float target_value) {
   // Create a mat that has the difference between each value and the target value
   cv::Mat difference_mat;
   cv::absdiff(row, target_value, difference_mat);
@@ -57,9 +57,9 @@ bool MatchingLut(const cv::Mat& src, const cv::Mat& h, cv::Mat& lut) {
       // get the src cdf value at the index
       float src_val = static_cast<float>(src_cdf.at<double>(ch, i));
       // Find the index in the target_cdf row that's closest to the src_val
-      int matchedIndex = findClosestIndexMat(target_cdf_row, src_val);
+      int matched_index = _find_closest_index_mat(target_cdf_row, src_val);
       // Set the value of the LUT at that index to the 'closest' index in the target cdf
-      lut.at<uchar>(ch, i) = static_cast<uchar>(matchedIndex);
+      lut.at<uchar>(ch, i) = static_cast<uchar>(matched_index);
     }
   }
   return true;

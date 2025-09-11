@@ -40,7 +40,7 @@ void _create_lut_from_cdf(const cv::Mat& cdf_row, std::vector<uchar>& lut_values
   // Resize the lut_values so there isn't a segmentation fault
   lut_values.resize(256);
   // For each value, multiply it by 255 to get the value that should be in the LUT
-  for (int i = 0; i < 256; ++i) {
+  for (int i = 0; i < 256; i++) {
     double val = cdf_row.at<double>(i);
     // use round and clamp to make sure the value is valid
     lut_values[i] = static_cast<uchar>(std::round(std::clamp(val * 255.0, 0.0, 255.0)));

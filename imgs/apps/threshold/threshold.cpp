@@ -5,11 +5,9 @@
 #include <boost/program_options.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-// #include "imgs/third_party/gnuplot-iostream.h"
 
 #include "imgs/ipcv/otsus_threshold/OtsusThreshold.h"
 #include "imgs/ipcv/utils/Utils.h"
-// #include "imgs/third_party/gnuplot-iostream.h"
 #include "imgs/plot/plot.h"
 
 using namespace std;

@@ -99,14 +99,15 @@ int _get_threshold_for_color(cv::Mat& pdf){
 bool OtsusThreshold(const cv::Mat& src, cv::Vec3b& threshold) {
   threshold = cv::Vec3b();
 
-  // convert to histogram
+  // convert src to histogram
   cv::Mat histogram;
   Histogram(src, histogram);
 
-  // convert to PDF
+  // convert the histogram to a PDF
   cv::Mat pdf;
   HistogramToPdf(histogram, pdf);
 
+  // For each color, calculate the threshold and add it to the thresholds vector
   for(int i = 0; i <3; i++){
     cv::Mat single_color_pdf = pdf.row(i).clone();
     threshold[i] = static_cast<uchar>(_get_threshold_for_color(single_color_pdf));

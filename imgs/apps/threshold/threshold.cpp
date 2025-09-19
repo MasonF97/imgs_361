@@ -8,6 +8,7 @@
 
 #include "imgs/ipcv/otsus_threshold/OtsusThreshold.h"
 #include "imgs/ipcv/utils/Utils.h"
+#include "imgs/plot/plot.h"
 
 using namespace std;
 
@@ -73,6 +74,39 @@ int main(int argc, char* argv[]) {
   if (verbose) {
     cout << "Threshold values = ";
     cout << threshold << endl;
+  }
+
+  // If verbose create plots that show the pdf with a vertical line at the threshold value
+  // Done in a similar way to plot_histogram.cpp
+  if (verbose) {
+    // Create the pdf
+    cv::Mat_<int> h;
+    ipcv::Histogram(src, h);
+    cv::Mat_<double> pdf;
+    ipcv::HistogramToPdf(h, pdf);
+
+    // Create a vector to represent the x axis
+    std::vector<double> x_vector(256);
+    for (int i = 0; i < 256; i++) {
+      x_vector[i] = i;
+    }
+  
+    for(int x = 0; x < 3; x++){
+      // create a vector to represent the y axis 
+      std::vector<double> y_vector(256);
+      for (int i = 0; i < 256; ++i) {
+        y_vector[i] = pdf.at<double>(x, i);
+      }
+      plot::plot2d::Params params;
+      params.set_x_label("Digital Count");
+      params.set_x_min(0);
+      params.set_x_max(255);
+      // set the threshold value
+      params.set_xvline(static_cast<double>(threshold[x]));
+      params.set_y_label("Probability Density");
+      // Create the plot
+      plot::plot2d::Plot2d(x_vector, y_vector, params);
+    }
   }
 
   cv::Mat lut;

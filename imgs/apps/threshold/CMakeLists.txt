@@ -6,6 +6,7 @@ rit_add_executable(threshold
 target_link_libraries(threshold 
   rit::ipcv_otsus_threshold 
   rit::ipcv_utils 
+  rit::plot 
   Boost::filesystem
   Boost::program_options
   opencv_core

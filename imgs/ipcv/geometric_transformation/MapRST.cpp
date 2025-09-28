@@ -102,10 +102,17 @@ vector<vector<double>> create_point_matrix(double x, double y){
 }
 
 vector<vector<double>> create_transformation_matrix(double angle, double scale_x, double scale_y,
-    double translation_x, double translation_y, bool inverse = false){
+    double translation_x, double translation_y, int cols, int rows, bool inverse = false){
+
+  double cx = cols / 2.0;
+  double cy = rows / 2.0;
+
+  vector<vector<double>> move_center_to_origin_matrix = create_translation_matrix(-cx, -cy, inverse);
   
   // Create the rotate matrix
   vector<vector<double>> rotation_matrix = create_rotation_matrix(angle, inverse);
+
+  vector<vector<double>> move_center_back_matrix = create_translation_matrix(cx, cy, inverse);
 
   // Create the scale matrix
   vector<vector<double>> scale_matrix = create_scale_matrix(scale_x, scale_y, inverse);
@@ -114,9 +121,15 @@ vector<vector<double>> create_transformation_matrix(double angle, double scale_x
   vector<vector<double>> translation_matrix = create_translation_matrix(translation_x, translation_y, inverse);
 
   if (inverse){
-  return multiply_matrices(multiply_matrices(rotation_matrix, scale_matrix), translation_matrix);
+    return multiply_matrices(move_center_to_origin_matrix, 
+      multiply_matrices(rotation_matrix,
+        multiply_matrices(move_center_back_matrix,
+          multiply_matrices(scale_matrix, translation_matrix))));
   }else{
-  return multiply_matrices(multiply_matrices(translation_matrix, scale_matrix), rotation_matrix);
+    return multiply_matrices(translation_matrix, 
+      multiply_matrices(scale_matrix,
+        multiply_matrices(move_center_back_matrix,
+          multiply_matrices(rotation_matrix, move_center_to_origin_matrix))));
   }
 }
 
@@ -160,7 +173,7 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
 
   double ccw_angle = angle * -1;
 
-  vector<vector<double>> transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y);
+  vector<vector<double>> transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y, src.cols, src.rows);
 
   vector<int> min_max_x_y_results = get_min_max_y(src.cols, src.rows, transformation_matrix);
 
@@ -172,7 +185,7 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
   int dest_height = max_y - min_y;
   int dest_width = max_x - min_x;
 
-  vector<vector<double>> inverse_transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y, true);
+  vector<vector<double>> inverse_transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y,src.cols, src.rows, true);
 
   map1 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
   map2 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);

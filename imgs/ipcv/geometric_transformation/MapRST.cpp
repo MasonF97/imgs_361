@@ -185,6 +185,9 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
   int dest_height = max_y - min_y;
   int dest_width = max_x - min_x;
 
+  cout << dest_height << endl;
+  cout << dest_width << endl;
+
   vector<vector<double>> inverse_transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y,src.cols, src.rows, true);
 
   map1 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
@@ -197,6 +200,13 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
       dest_coords[2][0] = 1;
       vector<vector<double>> src_coords = multiply_matrices(inverse_transformation_matrix, dest_coords);
       
+      // if (src_coords[0][0] < 0){
+      //   cout << src_coords[0][0] << endl;
+      // }
+      // if (src_coords[1][0] < 0){
+      //   cout << src_coords[1][0] << endl;
+      // }
+
       map1.at<float>(y, x) = src_coords[0][0];
       map2.at<float>(y, x) = src_coords[1][0];
     }

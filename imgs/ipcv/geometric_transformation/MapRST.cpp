@@ -133,7 +133,7 @@ vector<vector<double>> create_transformation_matrix(double angle, double scale_x
   }
 }
 
-vector<int> get_min_max_y(int cols, int rows, vector<vector<double>> transformation_matrix){
+vector<double> get_min_max_y(int cols, int rows, vector<vector<double>> transformation_matrix){
   vector<vector<double>> corner_1 = create_point_matrix(0,0);
   vector<vector<double>> corner_2 = create_point_matrix(cols, 0);
   vector<vector<double>> corner_3 = create_point_matrix(0, rows);
@@ -144,11 +144,16 @@ vector<int> get_min_max_y(int cols, int rows, vector<vector<double>> transformat
   vector<vector<double>> corner_3_transformed = multiply_matrices(transformation_matrix, corner_3);
   vector<vector<double>> corner_4_transformed = multiply_matrices(transformation_matrix, corner_4);
 
-  vector<int> return_vector(4, 0);
-  return_vector[0] = std::ceil(std::max({corner_1_transformed[0][0], corner_2_transformed[0][0], corner_3_transformed[0][0], corner_4_transformed[0][0]}));
-  return_vector[1] = std::floor(std::min({corner_1_transformed[0][0], corner_2_transformed[0][0], corner_3_transformed[0][0], corner_4_transformed[0][0]}));
-  return_vector[2] = std::ceil(std::max({corner_1_transformed[1][0], corner_2_transformed[1][0], corner_3_transformed[1][0], corner_4_transformed[1][0]}));
-  return_vector[3] = std::floor(std::min({corner_1_transformed[1][0], corner_2_transformed[1][0], corner_3_transformed[1][0], corner_4_transformed[1][0]}));
+  cout << corner_1_transformed[0][0] << " " << corner_1_transformed[1][0] << endl;
+  cout << corner_2_transformed[0][0] << " " << corner_2_transformed[1][0] << endl;
+  cout << corner_3_transformed[0][0] << " " << corner_3_transformed[1][0] << endl;
+  cout << corner_4_transformed[0][0] << " " << corner_4_transformed[1][0] << endl;
+
+  vector<double> return_vector(4, 0);
+  return_vector[0] =(std::max({corner_1_transformed[0][0], corner_2_transformed[0][0], corner_3_transformed[0][0], corner_4_transformed[0][0]}));
+  return_vector[1] =(std::min({corner_1_transformed[0][0], corner_2_transformed[0][0], corner_3_transformed[0][0], corner_4_transformed[0][0]}));
+  return_vector[2] =(std::max({corner_1_transformed[1][0], corner_2_transformed[1][0], corner_3_transformed[1][0], corner_4_transformed[1][0]}));
+  return_vector[3] =(std::min({corner_1_transformed[1][0], corner_2_transformed[1][0], corner_3_transformed[1][0], corner_4_transformed[1][0]}));
   return return_vector;
 }
 
@@ -175,12 +180,18 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
 
   vector<vector<double>> transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y, src.cols, src.rows);
 
-  vector<int> min_max_x_y_results = get_min_max_y(src.cols, src.rows, transformation_matrix);
+  vector<double> min_max_x_y_results = get_min_max_y(src.cols, src.rows, transformation_matrix);
 
   double max_x = min_max_x_y_results[0];
   double min_x = min_max_x_y_results[1];
   double max_y = min_max_x_y_results[2];
   double min_y = min_max_x_y_results[3];
+
+  cout << endl;
+  cout << max_x << endl;
+  cout << min_x << endl;
+  cout << max_y << endl;
+  cout << min_y << endl;
 
   int dest_height = max_y - min_y;
   int dest_width = max_x - min_x;

@@ -92,17 +92,40 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
   b = (Xt X)^-2 * Xt Yy'
   */
 
-  // Construct model matrix
+  
 
   // Get polynomials
   vector<std::pair<int, int>> polynomial_pairs = get_polynomial_pairs(order);
 
-  for (std::pair<int, int> pair : polynomial_pairs){
-    cout << pair.first << " " << pair.second << endl;
+  // for (std::pair<int, int> pair : polynomial_pairs){
+  //   cout << pair.first << " " << pair.second << endl;
+  // }
+
+  // Construct model matrix
+  int model_matrix_rows = static_cast<int>(src_points.size());
+  int model_matrix_cols = static_cast<int>(polynomial_pairs.size());
+  // Does it need to be a double?
+  // vector<vector<double>> model_matrix (model_matrix_rows, std::vector<double>(model_matrix_cols, 0));
+  Eigen::MatrixXd model_matrix(model_matrix_rows, model_matrix_cols);
+  for (int i = 0; i < model_matrix_rows; i++){
+    for( int j = 0; j < model_matrix_cols; j++){
+      model_matrix(i, j) = pow(map_points[i].x, polynomial_pairs[j].first) * pow(map_points[i].y, polynomial_pairs[j].second);
+    }
   }
 
   // Construct observation matrices
+  // Create x observation matrix
+  Eigen::MatrixXd x_observation_matrix (model_matrix_rows, 1);
+  // Create y observation matrix
+  Eigen::MatrixXd y_observation_matrix (model_matrix_rows, 1);
+  // Populate both matrices
+  for (int i = 0; i< model_matrix_rows;i++){
+    x_observation_matrix(i,0) = src_points[i].x;
+    y_observation_matrix(i,0) = src_points[i].y;
+  }
 
+  Eigen::MatrixXd a_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * x_observation_matrix;
+  Eigen::MatrixXd b_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * y_observation_matrix;
 
 
   return true;

@@ -31,6 +31,15 @@ vector<std::pair<int, int>> get_polynomial_pairs(int order){
   return polynomial_pairs;
 }
 
+double get_prime_coord(vector<pair<int, int>> polynomial_pairs, Eigen::MatrixXd a_or_b, double x, double y){
+  double sum = 0;
+  int size_of_polynomial_pairs = static_cast<int>(polynomial_pairs.size());
+  for( int j = 0; j < size_of_polynomial_pairs; j++){
+    sum += a_or_b(j,0)*(pow(x, polynomial_pairs[j].first) * pow(y, polynomial_pairs[j].second));
+  }
+  return sum;
+}
+
 /** Find the source coordinates (map1, map2) for a ground control point
  *  derived mapping polynomial transformation
  *
@@ -92,8 +101,6 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
   b = (Xt X)^-2 * Xt Yy'
   */
 
-  
-
   // Get polynomials
   vector<std::pair<int, int>> polynomial_pairs = get_polynomial_pairs(order);
 
@@ -127,6 +134,20 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
   Eigen::MatrixXd a_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * x_observation_matrix;
   Eigen::MatrixXd b_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * y_observation_matrix;
 
+
+  int dest_height = map.rows;
+  int dest_width = map.cols;
+
+  map1 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
+  map2 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
+
+  for(int y = 0; y < dest_height; y++){
+    for (int x = 0; x < dest_width; x++){
+      // each polynomial + a or b
+      map1.at<float>(y, x) = get_prime_coord(polynomial_pairs, a_matrix, x, y);
+      map2.at<float>(y, x) = get_prime_coord(polynomial_pairs, b_matrix, x, y);
+    }
+  }
 
   return true;
 }

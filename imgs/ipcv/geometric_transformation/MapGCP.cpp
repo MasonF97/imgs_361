@@ -20,6 +20,8 @@ using namespace std;
 namespace ipcv {
 
 vector<std::pair<int, int>> get_polynomial_pairs(int order){
+  // Generate all x, y exponent pairs for the polynomial order
+ // Each pair corresponds to a term x^i * y^j
   vector<std::pair<int, int>> polynomial_pairs;
   for (int y = 0; y<= order; y++){
     for (int x = 0; x<= order; x++){
@@ -31,11 +33,12 @@ vector<std::pair<int, int>> get_polynomial_pairs(int order){
   return polynomial_pairs;
 }
 
-double get_prime_coord(vector<pair<int, int>> polynomial_pairs, Eigen::MatrixXd a_or_b, double x, double y){
+double evaluate_polynomial(vector<pair<int, int>> polynomial_pairs, Eigen::MatrixXd coeff_matrix, double x, double y){
+  // Evaluate the polynomial at x, y using the coefficients in the coeff_matrix 
   double sum = 0;
   int size_of_polynomial_pairs = static_cast<int>(polynomial_pairs.size());
   for( int j = 0; j < size_of_polynomial_pairs; j++){
-    sum += a_or_b(j,0)*(pow(x, polynomial_pairs[j].first) * pow(y, polynomial_pairs[j].second));
+    sum += coeff_matrix(j,0)*(pow(x, polynomial_pairs[j].first) * pow(y, polynomial_pairs[j].second));
   }
   return sum;
 }
@@ -76,46 +79,16 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
             const vector<cv::Point> src_points,
             const vector<cv::Point> map_points, const int order,
             cv::Mat& map1, cv::Mat& map2) {
-  // Use a psuedo inverse for x
-  // a = (Xt X)^-1 * Xt Y
-  // X transpose * X gives a square matrix
-  // Then get the inverse
-  // Then get multiply it by the transpose again
-  // Then multiply by the Y
-  /*
-  The sums of the exponents are not greater than 2, so it's a second order polynomial
-  x' = a0 x0 y0 + a1 x1 y0 + a2 x0 y1 + a3 x1 y1 + a4 x2 y0 + a5 x0 y2
-  Can make this using 2 loops
-  x0 y0
-  x0 y1 x1 y0
-  x0 y2 x1  y1 x2 y0
-  (Reverse the order)
-
-  Model matrix = 6 terms in the equation, so 6 terms in the model equation
-  X = 1 x1 y1 x1y1 x2 y2
-  This is multiple linear least squares regression
-  Observation matrix Y': Two matrices x' and y'
-
-  Solve for A's and B's
-  a = (Xt X)^-2 * Xt Yx'
-  b = (Xt X)^-2 * Xt Yy'
-  */
-
-  // Get polynomials
+  // Get the polynomial term exponents
   vector<std::pair<int, int>> polynomial_pairs = get_polynomial_pairs(order);
 
-  // for (std::pair<int, int> pair : polynomial_pairs){
-  //   cout << pair.first << " " << pair.second << endl;
-  // }
-
-  // Construct model matrix
+  // Construct the model matrix
   int model_matrix_rows = static_cast<int>(src_points.size());
   int model_matrix_cols = static_cast<int>(polynomial_pairs.size());
-  // Does it need to be a double?
-  // vector<vector<double>> model_matrix (model_matrix_rows, std::vector<double>(model_matrix_cols, 0));
   Eigen::MatrixXd model_matrix(model_matrix_rows, model_matrix_cols);
   for (int i = 0; i < model_matrix_rows; i++){
     for( int j = 0; j < model_matrix_cols; j++){
+      // calculate the value using the exponents in polynomial_pairs
       model_matrix(i, j) = pow(map_points[i].x, polynomial_pairs[j].first) * pow(map_points[i].y, polynomial_pairs[j].second);
     }
   }
@@ -131,10 +104,12 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
     y_observation_matrix(i,0) = src_points[i].y;
   }
 
-  Eigen::MatrixXd a_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * x_observation_matrix;
-  Eigen::MatrixXd b_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * y_observation_matrix;
+  // Solve for the a (x) and b (y) coefficient matrices using the least squares solution
+  // Uses the psuedo inverse
+  Eigen::MatrixXd a_coefficient_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * x_observation_matrix;
+  Eigen::MatrixXd b_coefficient_matrix = (model_matrix.transpose() * model_matrix).inverse() * model_matrix.transpose() * y_observation_matrix;
 
-
+  // Create the maps using the map image's size
   int dest_height = map.rows;
   int dest_width = map.cols;
 
@@ -143,9 +118,10 @@ bool MapGCP(const cv::Mat src, const cv::Mat map,
 
   for(int y = 0; y < dest_height; y++){
     for (int x = 0; x < dest_width; x++){
-      // each polynomial + a or b
-      map1.at<float>(y, x) = get_prime_coord(polynomial_pairs, a_matrix, x, y);
-      map2.at<float>(y, x) = get_prime_coord(polynomial_pairs, b_matrix, x, y);
+      // Get the x source coordinate 
+      map1.at<float>(y, x) = evaluate_polynomial(polynomial_pairs, a_coefficient_matrix, x, y);
+      // Get the x source coordinate 
+      map2.at<float>(y, x) = evaluate_polynomial(polynomial_pairs, b_coefficient_matrix, x, y);
     }
   }
 

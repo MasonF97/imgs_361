@@ -14,14 +14,16 @@ using namespace std;
 
 namespace ipcv {
 
-cv::Vec3f bilinear_interpolation(vector<cv::Vec3b> point_dcs, float x, float y, int dc_i, int dc_j){
-  float dx = x - dc_j;
-  float dy = y - dc_i;
+cv::Vec3f bilinear_interpolation(vector<cv::Vec3b> neighbor_pixels_dc, float x, float y, int neighbor_i, int neighbor_j){
+  // Perform bilinear interpolation for the x,y coordinate using four surrounding pixels
+  float dx = x - neighbor_j;
+  float dy = y - neighbor_i;
 
-  
-  cv::Vec3f dc_x_j = (point_dcs[1] - point_dcs[0])* dx + point_dcs[0];
-  cv::Vec3f dc_x_j1 = (point_dcs[3] - point_dcs[2])* dx + point_dcs[2];
+  // Interpolate along x for top and bottom rows
+  cv::Vec3f dc_x_j = (neighbor_pixels_dc[1] - neighbor_pixels_dc[0])* dx + neighbor_pixels_dc[0];
+  cv::Vec3f dc_x_j1 = (neighbor_pixels_dc[3] - neighbor_pixels_dc[2])* dx + neighbor_pixels_dc[2];
 
+  // Interpolate along y between the two rows
   return (dc_x_j1 - dc_x_j) * dy + dc_x_j;
 }
 
@@ -45,17 +47,23 @@ bool Remap(const cv::Mat& src, cv::Mat& dst, const cv::Mat& map1,
            const BorderMode border_mode, const uint8_t border_value) {
   dst.create(map1.size(), src.type());
 
+  // Loop over each pixel in the destination image
   for (int i = 0; i < dst.rows;i++){
     for (int j = 0; j < dst.cols; j++){
+      // Get the remap coordinates from the maps
       float x = map1.at<float>(i, j);
       float y = map2.at<float>(i, j);
       if (interpolation == Interpolation::NEAREST){
+        // Nearest neighbor interpolation
         int src_x = static_cast<int>(x + 0.5);
         int src_y = static_cast<int>(y + 0.5);
+        // Check if any of the pixels are out of bounds
         if (src_x < 0 || src_y < 0 || src_x >= src.cols || src_y >= src.rows){
           if (border_mode == BorderMode::CONSTANT){
+            // If border mode is constant, set the pixel to the border_value
             dst.at<cv::Vec3b>(i, j) = cv::Vec3b (border_value, border_value, border_value);
           }else{
+            // If border mdoe is replicate, clamp the coords to get the nearest pixel in the image
             int clamped_y = std::clamp(src_y, 0, src.rows-1);
             int clamped_x = std::clamp(src_x, 0, src.cols-1);
             dst.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(clamped_y, clamped_x);
@@ -64,34 +72,40 @@ bool Remap(const cv::Mat& src, cv::Mat& dst, const cv::Mat& map1,
           dst.at<cv::Vec3b>(i, j) = src.at<cv::Vec3b>(src_y, src_x);
         }
       }else{
-        int dc_i = std::floor(y);
-        int dc_j = std::floor(x);
+        // find two of the neighbors for bilinear interpolation
+        int neighbor_i = std::floor(y);
+        int neighbor_j = std::floor(x);
 
-        vector<vector<int>> dc_point_coords = {
-            {dc_i, dc_j},
-            {dc_i + 1, dc_j},
-            {dc_i, dc_j + 1},
-            {dc_i + 1, dc_j + 1}
+        // Create a vector to store the neighbor pixel coords
+        vector<vector<int>> neighbor_pixel_coords = {
+            {neighbor_i, neighbor_j},
+            {neighbor_i + 1, neighbor_j},
+            {neighbor_i, neighbor_j + 1},
+            {neighbor_i + 1, neighbor_j + 1}
           };
 
-        vector<cv::Vec3b> dc_points_dc(4);
+        // Create a vector to store the neighbor pixels digital counts
+        vector<cv::Vec3b> neighbor_pixels_dc(4);
 
         for( int k = 0; k< 4; k ++){
-          vector<int> point = dc_point_coords[k];
+          // For each of the neighbors, check if they are out of bounds
+          vector<int> point = neighbor_pixel_coords[k];
           if (point[0] < 0 || point[1] < 0 || point[1] >= src.cols || point[0] >= src.rows){
             if (border_mode == BorderMode::CONSTANT){
-              dc_points_dc[k] = cv::Vec3b (border_value, border_value, border_value);
+              // If the border mode is constant, set that pixels value to the border value
+              neighbor_pixels_dc[k] = cv::Vec3b (border_value, border_value, border_value);
             }else{
+              // If the border mode is replicate, clamp the coords to find the closest pixel in the image
               int clamped_y = clamp(point[0], 0, src.rows-1);
               int clamped_x = clamp(point[1], 0, src.cols-1);
-              dc_points_dc[k] = src.at<cv::Vec3b>(clamped_y, clamped_x);
+              neighbor_pixels_dc[k] = src.at<cv::Vec3b>(clamped_y, clamped_x);
             }
           }else{
-            dc_points_dc[k] = src.at<cv::Vec3b>(point[0], point[1]);
+            neighbor_pixels_dc[k] = src.at<cv::Vec3b>(point[0], point[1]);
           }
         }
-
-        dst.at<cv::Vec3b>(i, j) = bilinear_interpolation(dc_points_dc, x, y, dc_i, dc_j);
+        // Use bilinear interpolation to find the new value for the destination pixel
+        dst.at<cv::Vec3b>(i, j) = bilinear_interpolation(neighbor_pixels_dc, x, y, neighbor_i, neighbor_j);
       }
     }
   }

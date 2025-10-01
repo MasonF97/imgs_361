@@ -20,12 +20,8 @@ using namespace std;
 namespace ipcv {
 
 Eigen::Matrix3d create_rotation_matrix(double angle){
+  // Create a matrix to represent a rotation transformation
   Eigen::Matrix3d rotation_matrix;
-  // rotation_matrix(0,1) = ;
-  // rotation_matrix(1,0) = ;
-  // rotation_matrix(0,0) = ;
-  // rotation_matrix(1,1) = ;
-  // rotation_matrix(2,2) = 1;
   rotation_matrix << std::cos(angle), -1 * (std::sin(angle)), 0,
                   std::sin(angle), std::cos(angle), 0,
                   0, 0, 1;
@@ -33,6 +29,7 @@ Eigen::Matrix3d create_rotation_matrix(double angle){
 }
 
 Eigen::Matrix3d create_scale_matrix(double scale_x, double scale_y){
+  // Create a matrix to represent a scale transformation
   Eigen::Matrix3d scale_matrix;
   scale_matrix << scale_x, 0, 0,
                   0, scale_y, 0,
@@ -41,12 +38,8 @@ Eigen::Matrix3d create_scale_matrix(double scale_x, double scale_y){
 }
 
 Eigen::Matrix3d create_translation_matrix(double translation_x, double translation_y){
+  // Create a matrix to represent a translation transformation
   Eigen::Matrix3d translation_matrix;
-  // translation_matrix[0][2] = translation_x;
-  // translation_matrix[1][2] = translation_y;
-  // translation_matrix[0][0] = 1;
-  // translation_matrix[1][1] = 1;
-  // translation_matrix[2][2] = 1;
   translation_matrix << 1, 0, translation_x,
                         0, 1, translation_y,
                         0, 0, 1;
@@ -54,10 +47,8 @@ Eigen::Matrix3d create_translation_matrix(double translation_x, double translati
 }
 
 Eigen::MatrixXd create_point_matrix(double x, double y){
+  // Create a matrix to represent a 3x1 homogenous coordinate
   Eigen::MatrixXd dest_coords(3, 1);
-  // dest_coords(0,0) = x;
-  // dest_coords(1,0) = y;
-  // dest_coords(2,0) = 1;
   dest_coords << x,
                  y,
                  1;
@@ -67,42 +58,34 @@ Eigen::MatrixXd create_point_matrix(double x, double y){
 Eigen::Matrix3d create_transformation_matrix(double angle, double scale_x, double scale_y,
     double translation_x, double translation_y, int cols, int rows){
 
+  // Determine how much the image needs to be translated by to move the center to the origin
   double cx = cols / 2.0;
   double cy = rows / 2.0;
 
+  // Create a translation matrix to move the center of the image to the origin
   Eigen::Matrix3d move_center_to_origin_matrix = create_translation_matrix(-cx, -cy);
-  
   // Create the rotate matrix
   Eigen::Matrix3d rotation_matrix = create_rotation_matrix(angle);
-
+  // Create a translation matrix to move the center of the image back to it's original location
   Eigen::Matrix3d move_center_back_matrix = create_translation_matrix(cx, cy);
-
   // Create the scale matrix
   Eigen::Matrix3d scale_matrix = create_scale_matrix(scale_x, scale_y);
-
   // Create the translation matrix
   Eigen::Matrix3d translation_matrix = create_translation_matrix(translation_x, translation_y);
 
+  // Combine all of the matrices into 1 affine transformation matrix
   Eigen::Matrix3d transformation_matrix = translation_matrix * scale_matrix * move_center_back_matrix * rotation_matrix * move_center_to_origin_matrix;
   return transformation_matrix;
 }
 
 vector<double> get_min_max_y(int cols, int rows, Eigen::Matrix3d transformation_matrix){
-  Eigen::MatrixXd corner_1 = create_point_matrix(0,0);
-  Eigen::MatrixXd corner_2 = create_point_matrix(cols, 0);
-  Eigen::MatrixXd corner_3 = create_point_matrix(0, rows);
-  Eigen::MatrixXd corner_4 = create_point_matrix(cols, rows);
+  // Define and transform each corner point
+  Eigen::MatrixXd corner_1_transformed = transformation_matrix * create_point_matrix(0,0);
+  Eigen::MatrixXd corner_2_transformed = transformation_matrix * create_point_matrix(cols, 0);
+  Eigen::MatrixXd corner_3_transformed = transformation_matrix * create_point_matrix(0, rows);
+  Eigen::MatrixXd corner_4_transformed = transformation_matrix * create_point_matrix(cols, rows);
 
-  Eigen::MatrixXd corner_1_transformed = transformation_matrix * corner_1;
-  Eigen::MatrixXd corner_2_transformed = transformation_matrix * corner_2;
-  Eigen::MatrixXd corner_3_transformed = transformation_matrix * corner_3;
-  Eigen::MatrixXd corner_4_transformed = transformation_matrix * corner_4;
-
-  // cout << corner_1_transformed[0][0] << " " << corner_1_transformed[1][0] << endl;
-  // cout << corner_2_transformed[0][0] << " " << corner_2_transformed[1][0] << endl;
-  // cout << corner_3_transformed[0][0] << " " << corner_3_transformed[1][0] << endl;
-  // cout << corner_4_transformed[0][0] << " " << corner_4_transformed[1][0] << endl;
-
+  // Return a list with the max_x, min_x, max_y, and min_y
   vector<double> return_vector(4, 0);
   return_vector[0] =(std::max({corner_1_transformed(0,0), corner_2_transformed(0,0), corner_3_transformed(0,0), corner_4_transformed(0,0)}));
   return_vector[1] =(std::min({corner_1_transformed(0,0), corner_2_transformed(0,0), corner_3_transformed(0,0), corner_4_transformed(0,0)}));
@@ -130,10 +113,13 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
             const double scale_y, const double translation_x,
             const double translation_y, cv::Mat& map1, cv::Mat& map2) {
 
+  // Make the angle negative so that the image is rotated counter clockwise
   double ccw_angle = angle * -1;
 
+  // Create the forward transformation matrix
   Eigen::MatrixXd transformation_matrix = create_transformation_matrix(ccw_angle, scale_x, scale_y, translation_x, translation_y, src.cols, src.rows);
 
+  // Calculate the max/min x and y coords after the transformation to determine the output image size
   vector<double> min_max_x_y_results = get_min_max_y(src.cols, src.rows, transformation_matrix);
 
   double max_x = min_max_x_y_results[0];
@@ -141,40 +127,24 @@ bool MapRST(const cv::Mat src, const double angle, const double scale_x,
   double max_y = min_max_x_y_results[2];
   double min_y = min_max_x_y_results[3];
 
-  cout << endl;
-  cout << max_x << endl;
-  cout << min_x << endl;
-  cout << max_y << endl;
-  cout << min_y << endl;
+  // Subtract the max from the min and round it to find the output image size
+  int dest_height = static_cast<int>(std::round(max_y - min_y));
+  int dest_width  = static_cast<int>(std::round(max_x - min_x));
 
-  int dest_height = max_y - min_y;
-  int dest_width = max_x - min_x;
-
-  cout << dest_height << endl;
-  cout << dest_width << endl;
-
+  // Create the inverse of the transformation matrix so that we can do inverse mapping
   Eigen::MatrixXd inverse_transformation_matrix = transformation_matrix.inverse();
 
-  // EIGEN EIGEN EIGEN
+  // Init the maps using the size information we got from transforming the corners
   map1 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
   map2 = cv::Mat::zeros(dest_height, dest_width, CV_32FC1);
+  // Iterate through each pixel in the destination image
   for (int y = 0; y < dest_height; y++) {
     for (int x = 0; x < dest_width; x++) {
-      Eigen::MatrixXd dest_coords(3, 1);
-      dest_coords << x + min_x,
-                     y + min_y,
-                     1;
-      // dest_coords[0][0] = x + min_x;
-      // dest_coords[1][0] = y + min_y;
-      // dest_coords[2][0] = 1;
+      // Create a coordinate matrix for the pixel
+      // Add the min_x and min_y to correct the location
+      Eigen::MatrixXd dest_coords = create_point_matrix(x + min_x, y + min_y);
+      // Multiply the inverse transformation matrix with the destination coords to determine where in the src image the pixel should come from
       Eigen::MatrixXd src_coords = inverse_transformation_matrix * dest_coords;
-      
-      // if (src_coords[0][0] < 0){
-      //   cout << src_coords[0][0] << endl;
-      // }
-      // if (src_coords[1][0] < 0){
-      //   cout << src_coords[1][0] << endl;
-      // }
 
       map1.at<float>(y, x) = src_coords(0,0);
       map2.at<float>(y, x) = src_coords(1,0);

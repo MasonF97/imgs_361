@@ -38,7 +38,55 @@ bool MapQ2Q(const cv::Mat src, const cv::Mat tgt,
             const vector<cv::Point> tgt_vertices, cv::Mat& map1,
             cv::Mat& map2) {
 
-  // Insert your code here
+  
+  Eigen::MatrixXd model_matrix(8,8);
+  model_matrix << tgt_vertices[0].x, tgt_vertices[0].y, 1, 0, 0, 0, tgt_vertices[0].x*-1*src_vertices[0].x, tgt_vertices[0].y*-1*src_vertices[0].x,
+    tgt_vertices[1].x, tgt_vertices[1].y, 1, 0, 0, 0, tgt_vertices[1].x*-1*src_vertices[1].x, tgt_vertices[1].y*-1*src_vertices[1].x,
+    tgt_vertices[2].x, tgt_vertices[2].y, 1, 0, 0, 0, tgt_vertices[2].x*-1*src_vertices[2].x, tgt_vertices[2].y*-1*src_vertices[2].x,
+    tgt_vertices[3].x, tgt_vertices[3].y, 1, 0, 0, 0, tgt_vertices[3].x*-1*src_vertices[3].x, tgt_vertices[3].y*-1*src_vertices[3].x,
+    0, 0, 0, tgt_vertices[0].x, tgt_vertices[0].y, 1, tgt_vertices[0].x*-1*src_vertices[0].y, tgt_vertices[0].y*-1*src_vertices[0].y,
+    0, 0, 0, tgt_vertices[1].x, tgt_vertices[1].y, 1, tgt_vertices[1].x*-1*src_vertices[1].y, tgt_vertices[1].y*-1*src_vertices[1].y,
+    0, 0, 0, tgt_vertices[2].x, tgt_vertices[2].y, 1, tgt_vertices[2].x*-1*src_vertices[2].y, tgt_vertices[2].y*-1*src_vertices[2].y,
+    0, 0, 0, tgt_vertices[3].x, tgt_vertices[3].y, 1, tgt_vertices[3].x*-1*src_vertices[3].y, tgt_vertices[3].y*-1*src_vertices[3].y;
+
+  Eigen::MatrixXd other_matrix(8,1);
+  other_matrix << src_vertices[0].x,
+    src_vertices[1].x,
+    src_vertices[2].x,
+    src_vertices[3].x,
+    src_vertices[0].y,
+    src_vertices[1].y,
+    src_vertices[2].y,
+    src_vertices[3].y;
+
+  Eigen::MatrixXd coefficents_matrix = model_matrix.inverse() * other_matrix;
+  Eigen::Matrix3d map_to_image_matrix;
+  map_to_image_matrix << coefficents_matrix(0,0), coefficents_matrix(1,0), coefficents_matrix(2,0),
+    coefficents_matrix(3,0), coefficents_matrix(4,0), coefficents_matrix(5,0),
+    coefficents_matrix(6,0), coefficents_matrix(7,0), 1;
+
+  int dest_width = tgt.cols;
+  int dest_height = tgt.rows;
+  
+  map1 = cv::Mat::zeros(tgt.size(), CV_32FC1);
+  map2 = cv::Mat::zeros(tgt.size(), CV_32FC1);
+
+  for(int v = 0; v < dest_height; v++){
+    for (int u = 0; u < dest_width; u++){
+      // Get the source coordinates
+      Eigen::MatrixXd target_matrix(3,1);
+      target_matrix << u,
+        v,
+        1;
+
+      Eigen::MatrixXd source_matrix = map_to_image_matrix * target_matrix;
+      double w = source_matrix(2, 0);
+      map1.at<float>(v, u) = source_matrix(0,0) / w;
+
+      map2.at<float>(v, u) = source_matrix(1,0) / w;
+      
+    }
+  }
 
   return true;
 }

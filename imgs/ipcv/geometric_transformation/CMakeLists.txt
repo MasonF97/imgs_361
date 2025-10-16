@@ -1,11 +1,13 @@
 rit_add_library(ipcv_geometric_transformation
   SOURCES
     MapGCP.cpp
+    MapPolar.cpp
     MapQ2Q.cpp
     MapRST.cpp
     Remap.cpp
   HEADERS
     MapGCP.h
+    MapPolar.h
     MapQ2Q.h
     MapRST.h
     Remap.h

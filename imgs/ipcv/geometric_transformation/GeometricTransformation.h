@@ -8,6 +8,7 @@
 #pragma once
 
 #include "imgs/ipcv/geometric_transformation/MapGCP.h"
+#include "imgs/ipcv/geometric_transformation/MapPolar.h"
 #include "imgs/ipcv/geometric_transformation/MapQ2Q.h"
 #include "imgs/ipcv/geometric_transformation/MapRST.h"
 #include "imgs/ipcv/geometric_transformation/Remap.h"

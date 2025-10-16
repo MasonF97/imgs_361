@@ -10,19 +10,26 @@ Destination path:
 
 ## 2
 File name in submission:
+MapQ2Q.cpp
+
+Destination path: 
+./imgs/ipcv/geometric_transformation/MapQ2Q.cpp
+
+## 3
+File name in submission:
 MapPolar.cpp
 
 Destination path: 
 ./imgs/ipcv/geometric_transformation/MapPolar.cpp
 
-## 3
+## 4
 File name in submission:
 MapPolar.h
 
 Destination path: 
 ./imgs/ipcv/geometric_transformation/MapPolar.h
 
-## 4
+## 5
 Update this file: 
 ./imgs/ipcv/geometric_transformation/CMakeLists.txt
 ```
@@ -50,32 +57,45 @@ target_link_libraries(ipcv_geometric_transformation
 )
 ```
 
-## 5
+## 6
 Add the following to this file: 
 ./imgs/ipcv/geometric_transformation/GeometricTransformation.h
 ```
 #include "imgs/ipcv/geometric_transformation/MapPolar.h"
 ```
 
-## 6
+## 7
 Add the following to this file:: 
 ./imgs/apps/CMakeLists.txt
 ```
 add_subdirectory(map_polar)
 ```
 
-## 7
+## 8
 Create this folder:
 ./imgs/apps/map_polar
 
-## 8
-File name in submission:
-imgs.apps.map_polar.CMakeLists.txt
-
-Destination path: 
-./imgs/apps/map_polar/CMakeLists.txt
-
 ## 9
+Update this file: 
+./imgs/apps/map_polar/CMakeLists.txt
+```
+rit_add_executable(map_polar
+  SOURCES
+    map_polar.cpp
+)
+
+target_link_libraries(map_polar
+  rit::ipcv_geometric_transformation 
+  Boost::filesystem
+  Boost::program_options
+  opencv_core
+  opencv_highgui
+  opencv_imgcodecs
+)
+
+```
+
+## 10
 File name in submission:
 imgs.apps.map_polar.map_polar.cpp
 

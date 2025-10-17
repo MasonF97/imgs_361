@@ -14,7 +14,8 @@ namespace ipcv {
 // Available border modes
 enum class BorderMode {
   CONSTANT,  // Use background color
-  REPLICATE  // Replicate border pixels
+  REPLICATE,  // Replicate border pixels
+  WRAP
 };
 
 /** Correlates an image with the provided kernel

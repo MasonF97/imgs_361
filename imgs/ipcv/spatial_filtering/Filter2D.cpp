@@ -66,40 +66,57 @@ bool Filter2D(const cv::Mat& src, cv::Mat& dst, const int ddepth,
     }
   };
 
-  auto apply_kernel = [src, kernel, kernel_anchor_col, kernel_anchor_row](int x, int y){
-    cv::Vec3f result(0,0,0);
-    for (int s = (-1 * kernel_anchor_col); s < kernel_anchor_col + 1; s++){
-      for (int t = (-1 * kernel_anchor_row); t < kernel_anchor_row +1; t++){
-        // result += (kernel.at<float>(t + kernel_anchor_row, s + kernel_anchor_col) * src.at<cv::Vec3b>(y+t, x+s));
-        cv::Vec3b pixel = src.at<cv::Vec3b>(y + t, x + s);
-        float k = kernel.at<float>(t + kernel_anchor_row, s + kernel_anchor_col);
-        result[0] += k * pixel[0];
-        result[1] += k * pixel[1];
-        result[2] += k * pixel[2];
-      }
-    }
-    return cv::Vec3b(
-      cv::saturate_cast<uchar>(result[0]),
-      cv::saturate_cast<uchar>(result[1]),
-      cv::saturate_cast<uchar>(result[2])
-    );
-  };
+  // auto apply_kernel = [src, kernel, kernel_anchor_col, kernel_anchor_row](int x, int y){
+    
+  // };
   // NEED TO MAKE MUCH FASTER
   // TRY RUNNING IT ON LOVELL, MAYBE ITS FASTER THERE?
-
-  cv::Vec3b delta_vector(delta, delta, delta);
   
+  // int cv_type = CV_MAKETYPE(ddepth, 3);
   dst = cv::Mat::zeros(dest_height, dest_width, ddepth);
 
   for (int y = 0; y< dest_height; y++){
     for (int x = 0; x< dest_width; x++){
-      if (in_bounds(x, y)){
-        dst.at<cv::Vec3b>(y, x) = apply_kernel(x, y) + delta_vector;
-      }else{
-        // update for multiple depths
-        // if(border_mode == BorderMode::CONSTANT)
-        dst.at<cv::Vec3b>(y, x) = cv::Vec3b (border_value, border_value, border_value) + delta_vector;
+      cv::Vec3f result(0,0,0);
+      for (int s = 0; s < kernel.rows; s++){
+        for (int t = 0; t < kernel.cols; t++){
+          int y_offset = s - kernel_anchor_row;
+          int x_offset = t - kernel_anchor_col;
+
+          int src_y = y + y_offset;
+          int src_x = x + x_offset;
+          cv::Vec3b pixel;
+          if (in_bounds(src_x, src_y)){
+            pixel = src.at<cv::Vec3b>(src_y, src_x);
+          }else{
+            if(border_mode == BorderMode::CONSTANT){
+              pixel = cv::Vec3b (border_value, border_value, border_value);
+            }
+            else if (border_mode == BorderMode::REPLICATE){
+              // If border mode is replicate, clamp the coords to get the nearest pixel in the image
+              int clamped_y = std::clamp(src_y, 0, dest_height - 1);
+              int clamped_x = std::clamp(src_x, 0, dest_width - 1);
+              pixel = src.at<cv::Vec3b>(clamped_y, clamped_x);
+            }else{
+              // Wrap
+              int wrapped_y = (src_y + dest_height) % dest_height;
+              int wrapped_x = (src_x + dest_width) % dest_width;
+      
+              pixel = src.at<cv::Vec3b>(wrapped_y, wrapped_x);
+            }
+          }
+          
+          float k = kernel.at<float>(s, t);
+          result[0] += k * pixel[0];
+          result[1] += k * pixel[1];
+          result[2] += k * pixel[2];
+        }
       }
+      dst.at<cv::Vec3b>(y, x) = cv::Vec3b(
+        cv::saturate_cast<uchar>(result[0] + delta),
+        cv::saturate_cast<uchar>(result[1] + delta),
+        cv::saturate_cast<uchar>(result[2] + delta)
+      );
 
     }
   }

@@ -46,6 +46,11 @@ bool Filter2D(const cv::Mat& src, cv::Mat& dst, const int ddepth,
     kernel_anchor_row = anchor.y;
     kernel_anchor_col = anchor.x;
   }
+  // Find the min and max y, used for the isolated border mode
+  int max_x = (dest_width - 1) - ((kernel.cols -1) - kernel_anchor_col);
+  int min_x = kernel_anchor_col;
+  int max_y = (dest_height - 1) - ((kernel.rows -1) - kernel_anchor_row);
+  int min_y = kernel_anchor_row;
   // Create the destination Mat
   dst = cv::Mat::zeros(dest_height, dest_width, src.type());
 
@@ -54,6 +59,14 @@ bool Filter2D(const cv::Mat& src, cv::Mat& dst, const int ddepth,
     for (int x = 0; x< dest_width; x++){
       // Create a vector to store the results of adding up each square in the kernel
       cv::Vec3f result(0,0,0);
+      // Check if the border mode is isolated, and if it is, check if the x,y are out of bounds
+      if (border_mode == BorderMode::ISOLATED && (x < min_x || x > max_x || y < min_y || y > max_y)){
+        dst.at<cv::Vec3b>(y, x) = cv::Vec3b(
+        cv::saturate_cast<uchar>(border_value + delta),
+        cv::saturate_cast<uchar>(border_value + delta),
+        cv::saturate_cast<uchar>(border_value + delta));
+        continue;  // Skip filtering
+      }
       // Iterate through the kernel
       for (int s = 0; s < kernel.rows; s++){
         for (int t = 0; t < kernel.cols; t++){

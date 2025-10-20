@@ -15,7 +15,8 @@ namespace ipcv {
 enum class BorderMode {
   CONSTANT,  // Use background color
   REPLICATE,  // Replicate border pixels
-  WRAP
+  WRAP,
+  ISOLATED
 };
 
 /** Correlates an image with the provided kernel
@@ -38,6 +39,6 @@ enum class BorderMode {
 bool Filter2D(const cv::Mat& src, cv::Mat& dst, const int ddepth,
               const cv::Mat& kernel, const cv::Point anchor = cv::Point(-1, -1),
               const int delta = 0,
-              const BorderMode border_mode = BorderMode::REPLICATE,
+              const BorderMode border_mode = BorderMode::WRAP,
               uint8_t border_value = 0);
 }

@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
   anchor.x = -1;
   anchor.y = -1;
 
-  string border_mode_string = "constant";
+  string border_mode_string = "wrap";
   ipcv::BorderMode border_mode;
   int value = 0;
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
       "anchor-y,y", po::value<int>(&anchor.y),
       "anchor point y coord")(
       "border-mode,m", po::value<string>(&border_mode_string),
-      "border mode (constant|replicate|wrap) [default is constant]")(
+      "border mode (constant|replicate|wrap|isolated) [wrap is constant]")(
       "border-value,b", po::value<int>(&value), "border value [default is 0]");
 
   
@@ -69,7 +69,9 @@ int main(int argc, char* argv[]) {
     border_mode = ipcv::BorderMode::REPLICATE;
   } else if (border_mode_string == "wrap") {
     border_mode = ipcv::BorderMode::WRAP;
-  } else {
+  } else if (border_mode_string == "isolated") {
+    border_mode = ipcv::BorderMode::ISOLATED;
+  }else {
     cerr << "*** ERROR *** ";
     cerr << "Provided border mode is not supported" << endl;
     return EXIT_FAILURE;
@@ -146,6 +148,7 @@ int main(int argc, char* argv[]) {
     cout << "anchor_x: " << anchor.x << endl;
     cout << "anchor_y: " << anchor.y << endl;
     cout << "border mode: " << border_mode_string << endl;
+    cout << "border value: " << value << endl;
   }
 
   cv::Mat dst;

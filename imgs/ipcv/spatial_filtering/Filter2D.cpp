@@ -84,6 +84,8 @@ bool Filter2D(const cv::Mat& src, cv::Mat& dst, const int ddepth,
       cv::saturate_cast<uchar>(result[2])
     );
   };
+  // NEED TO MAKE MUCH FASTER
+  // TRY RUNNING IT ON LOVELL, MAYBE ITS FASTER THERE?
 
   cv::Vec3b delta_vector(delta, delta, delta);
   

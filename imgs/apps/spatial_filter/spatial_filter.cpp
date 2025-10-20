@@ -20,15 +20,32 @@ int main(int argc, char* argv[]) {
 
   int kernel_type = 0;
 
+  cv::Point anchor;
+  anchor.x = -1;
+  anchor.y = -1;
+
+  string border_mode_string = "constant";
+  ipcv::BorderMode border_mode;
+  int value = 0;
+
   po::options_description options("Options");
   options.add_options()("help,h", "display this message")(
       "verbose,v", po::bool_switch(&verbose), "verbose [default is silent]")(
       "source-filename,i", po::value<string>(&src_filename), "source filename")(
       "destination-filename,o", po::value<string>(&dst_filename),
-      "destination filename")("kernel-type,k", po::value<int>(&kernel_type),
-                              "kernel type (0 is blur, 1 is more blur, 2 is "
-                              "sharpen, 3 is Laplacian) [default is 0]");
+      "destination filename")(
+      "kernel-type,k", po::value<int>(&kernel_type),
+        "kernel type (0 is blur, 1 is more blur, 2 is "
+        "sharpen, 3 is Laplacian) [default is 0]")(
+      "anchor-x,x", po::value<int>(&anchor.x),
+      "anchor point x coord")(
+      "anchor-y,y", po::value<int>(&anchor.y),
+      "anchor point y coord")(
+      "border-mode,m", po::value<string>(&border_mode_string),
+      "border mode (constant|replicate|wrap) [default is constant]")(
+      "border-value,b", po::value<int>(&value), "border value [default is 0]");
 
+  
   po::positional_options_description positional_options;
   positional_options.add("source-filename", -1);
 
@@ -44,6 +61,18 @@ int main(int argc, char* argv[]) {
     cout << "Usage: " << argv[0] << " [options] source-filename" << endl;
     cout << options << endl;
     return EXIT_SUCCESS;
+  }
+
+  if (border_mode_string == "constant") {
+    border_mode = ipcv::BorderMode::CONSTANT;
+  } else if (border_mode_string == "replicate") {
+    border_mode = ipcv::BorderMode::REPLICATE;
+  } else if (border_mode_string == "wrap") {
+    border_mode = ipcv::BorderMode::WRAP;
+  } else {
+    cerr << "*** ERROR *** ";
+    cerr << "Provided border mode is not supported" << endl;
+    return EXIT_FAILURE;
   }
 
   if (!boost::filesystem::exists(src_filename)) {
@@ -106,15 +135,6 @@ int main(int argc, char* argv[]) {
       return EXIT_FAILURE;
   }
 
-  cv::Point anchor;
-  anchor.x = -1;
-  anchor.y = -1;
-
-  ipcv::BorderMode border_type;
-  border_type = ipcv::BorderMode::REPLICATE;
-//  cv::BorderTypes border_type;
-//  border_type = cv::BORDER_REPLICATE;
-
   if (verbose) {
     cout << "Source filename: " << src_filename << endl;
     cout << "Size: " << src.size() << endl;
@@ -122,13 +142,18 @@ int main(int argc, char* argv[]) {
     cout << "Kernel: " << endl;
     cout << kernel << endl;
     cout << "Destination filename: " << dst_filename << endl;
+    cout << "Border value: " << value << endl;
+    cout << "anchor_x: " << anchor.x << endl;
+    cout << "anchor_y: " << anchor.y << endl;
+    cout << "border mode: " << border_mode_string << endl;
   }
 
   cv::Mat dst;
 
   clock_t startTime = clock();
+  uint8_t border_value = value;
 
-  ipcv::Filter2D(src, dst, ddepth, kernel, anchor, delta, border_type);
+  ipcv::Filter2D(src, dst, ddepth, kernel, anchor, delta, border_mode, border_value);
 //  cv::filter2D(src, dst, ddepth, kernel, anchor, delta, border_type);
 
   clock_t endTime = clock();

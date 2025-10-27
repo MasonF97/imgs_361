@@ -19,6 +19,9 @@ int main(int argc, char* argv[]) {
   double sigma_distance = 5;
   double sigma_range = 50;
   int filter_radius = -1;
+  string border_mode_string = "constant";
+  ipcv::BorderMode border_mode;
+  int value = 0;
 
   po::options_description options("Options");
   options.add_options()("help,h", "display this message")(
@@ -32,7 +35,10 @@ int main(int argc, char* argv[]) {
       "range filter standard deviation")(
       "radius,R", po::value<int>(&filter_radius),
       "filter radius (if negative, use twice the standard deviation of the "
-      "distance filter) [default is -1]");
+      "distance filter) [default is -1]")(
+      "border-mode,m", po::value<string>(&border_mode_string),
+      "border mode (constant|replicate) [default is constant]")(
+      "border-value,b", po::value<int>(&value), "border value [default is 0]");
 
   po::positional_options_description positional_options;
   positional_options.add("source-filename", -1);
@@ -51,6 +57,16 @@ int main(int argc, char* argv[]) {
     return EXIT_SUCCESS;
   }
 
+  if (border_mode_string == "constant") {
+    border_mode = ipcv::BorderMode::CONSTANT;
+  } else if (border_mode_string == "replicate") {
+    border_mode = ipcv::BorderMode::REPLICATE;
+  } else {
+    cerr << "*** ERROR *** ";
+    cerr << "Provided border mode is not supported" << endl;
+    return EXIT_FAILURE;
+  }
+
   if (!boost::filesystem::exists(src_filename)) {
     cerr << "Provided source file does not exists" << endl;
     return EXIT_FAILURE;
@@ -58,8 +74,7 @@ int main(int argc, char* argv[]) {
 
   cv::Mat src = cv::imread(src_filename, cv::IMREAD_COLOR);
 
-  ipcv::BorderMode border_mode;
-  border_mode = ipcv::BorderMode::REPLICATE;
+
 
   if (verbose) {
     cout << "Source filename: " << src_filename << endl;
@@ -68,6 +83,8 @@ int main(int argc, char* argv[]) {
     cout << "Distance filter standard deviation: " << sigma_distance << endl;
     cout << "Range filter standard deviation: " << sigma_range << endl;
     cout << "Filter radius: " << filter_radius << endl;
+    cout << "Border mode: " << border_mode_string << endl;
+    cout << "Border value: " << value << endl;
     cout << "Destination filename: " << dst_filename << endl;
   }
 
@@ -76,7 +93,7 @@ int main(int argc, char* argv[]) {
   clock_t startTime = clock();
 
   ipcv::BilateralFilter(src, dst, sigma_distance, sigma_range, filter_radius,
-                        border_mode);
+                        border_mode, value);
 
   clock_t endTime = clock();
 

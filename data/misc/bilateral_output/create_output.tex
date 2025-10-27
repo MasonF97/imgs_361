@@ -1,0 +1,50 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{pdflscape}
+
+\begin{document}
+
+\begin{landscape}
+\begin{table}[h]
+    \begin{center}
+        \caption{Bilateral filtering results when using a combination of $\sigma_d$ for the closeness filter and $\sigma_r$ for the similarity/range filter}
+        \label{tab:bilateral_filter_results}
+        \vspace{0.125in}
+        \begin{tabular} { c c c c c c }
+            $\sigma_d=1$ &
+            \includegraphics[scale=0.2]{images/panda_d01_r010.png} &
+            \includegraphics[scale=0.2]{images/panda_d01_r030.png} &
+            \includegraphics[scale=0.2]{images/panda_d01_r050.png} &
+            \includegraphics[scale=0.2]{images/panda_d01_r100.png} &
+            \includegraphics[scale=0.2]{images/panda_d01_r300.png} \\
+
+            $\sigma_d=3$ &
+            \includegraphics[scale=0.2]{images/panda_d03_r010.png} &
+            \includegraphics[scale=0.2]{images/panda_d03_r030.png} &
+            \includegraphics[scale=0.2]{images/panda_d03_r050.png} &
+            \includegraphics[scale=0.2]{images/panda_d03_r100.png} &
+            \includegraphics[scale=0.2]{images/panda_d03_r300.png} \\
+
+            $\sigma_d=5$ &
+            \includegraphics[scale=0.2]{images/panda_d05_r010.png} &
+            \includegraphics[scale=0.2]{images/panda_d05_r030.png} &
+            \includegraphics[scale=0.2]{images/panda_d05_r050.png} &
+            \includegraphics[scale=0.2]{images/panda_d05_r100.png} &
+            \includegraphics[scale=0.2]{images/panda_d05_r300.png} \\
+
+            $\sigma_d=10$ &
+            \includegraphics[scale=0.2]{images/panda_d10_r010.png} &
+            \includegraphics[scale=0.2]{images/panda_d10_r030.png} &
+            \includegraphics[scale=0.2]{images/panda_d10_r050.png} &
+            \includegraphics[scale=0.2]{images/panda_d10_r100.png} &
+            \includegraphics[scale=0.2]{images/panda_d10_r300.png} \\
+
+            & $\sigma_r=10$ & $\sigma_r=30$ & $\sigma_r=50$ & $\sigma_r=100$ & $\sigma_r=300$
+        \end{tabular}
+    \end{center}
+\end{table}
+\end{landscape}
+
+
+\end{document}

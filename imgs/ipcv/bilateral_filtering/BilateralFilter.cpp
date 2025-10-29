@@ -52,18 +52,19 @@ bool BilateralFilter(const cv::Mat& src, cv::Mat& dst,
     }
   }
 
-  // EVERYTHING HAS 3 CHANNELS, FMLLLLLLLLLLLLL
-  cout << "Number of channels: " << src.channels() << endl;
   // create a bool to indicate whether or not it's a color image
-  bool color_img = false;
-  // Split up the channels and convert to LAB if it's a color image
-  // Convert to LAB or grayscale and float
+  // Check if all channels are identical to determine whether or not it's greyscale
+  std::vector<cv::Mat> chans;
+  cv::split(src, chans);
+  bool is_greyscale = (cv::countNonZero(chans[0] != chans[1]) == 0 && cv::countNonZero(chans[0] != chans[2]) == 0);
+  
   cv::Mat lab_or_gray;
-  if (src.channels() == 3){
+  if (is_greyscale) {
+    // if it's greyscale, just use src
+    lab_or_gray = src.clone();  
+  } else {
+    // If it's a color image, convert to LAB
     cv::cvtColor(src, lab_or_gray, cv::COLOR_BGR2Lab);
-    color_img = true;
-  }else{
-    lab_or_gray = src.clone();
   }
   
   // Create an array of channels that are floats
@@ -156,7 +157,7 @@ bool BilateralFilter(const cv::Mat& src, cv::Mat& dst,
   cv::merge(dst_channels, dst);
 
   // Convert back to BGR if it's a color image
-  if (color_img) {
+  if (!is_greyscale) {
     cv::cvtColor(dst, dst, cv::COLOR_Lab2BGR);
   }
 

@@ -52,6 +52,8 @@ bool BilateralFilter(const cv::Mat& src, cv::Mat& dst,
     }
   }
 
+  // EVERYTHING HAS 3 CHANNELS, FMLLLLLLLLLLLLL
+  cout << "Number of channels: " << src.channels() << endl;
   // create a bool to indicate whether or not it's a color image
   bool color_img = false;
   // Split up the channels and convert to LAB if it's a color image

@@ -22,3 +22,4 @@
 #include "imgs/ipcv/utils/HistogramToCdf.h"
 #include "imgs/ipcv/utils/Psnr.h"
 #include "imgs/ipcv/utils/Rmse.h"
+#include "imgs/ipcv/utils/PipelineCv.h"

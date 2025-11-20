@@ -7,6 +7,8 @@ To run and create a video- the video will be saved in imgs/ipcv/fourier_transfor
 bin/fft_display -i ../data/misc/lenna.tif -s
 ```
 
+I tried uploading the video file, but it wouldn't let me. I think it may be too large
+
 
 # Uploaded files
 
@@ -38,8 +40,5 @@ Location: ./imgs/ipcv/utils/Utils.h
 
 imgs.ipcv.CMakeLists.txt
 Location: ./imgs/ipcv/CMakeLists.txt
-
-
-
 
 fft_display.avi

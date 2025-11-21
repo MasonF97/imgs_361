@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <numeric>
 
 using namespace std;
 #include <opencv2/core.hpp>
@@ -26,16 +27,9 @@ double minkowski_distance(double p, std::vector<float>& vector_1, std::vector<fl
   double sum = 0.0;
   // Check if p is 1 or 2, if so use a more optimized calculation
   if(p == 1){
-    for (size_t i = 0; i < n; i++) {
-      sum += std::abs(vector_1[i] - vector_2[i]);
-    }
-    return sum;
+    return cv::norm(vector_1, vector_2, cv::NORM_L1);
   }else if(p == 2){
-    for (size_t i = 0; i < n; i++) {
-      double diff = vector_1[i] - vector_2[i];
-      sum += diff * diff;
-    }
-    return std::sqrt(sum);
+    return cv::norm(vector_1, vector_2, cv::NORM_L2);
   }else{
     // Regular minkowski formula
     for (size_t i = 0; i < n; i++){
@@ -46,44 +40,33 @@ double minkowski_distance(double p, std::vector<float>& vector_1, std::vector<fl
 }
 
 std::vector<int> find_k_closest(int k, std::vector<double>& distances){
-  // make an array of pairs so we know the indexes
-  std::vector<std::pair<double, int>> distances_with_indexes;
-  distances_with_indexes.reserve(distances.size());
-  for(size_t i = 0; i < distances.size(); i++){
-    distances_with_indexes.push_back({distances[i], (int)i});
-  }
-  // sort the distances
-  std::sort(distances_with_indexes.begin(), distances_with_indexes.end());
-
-  // get the first k values
-  std::vector<int> k_closest;
-  for(int i = 0; i<k;i++){
-    k_closest.push_back(distances_with_indexes[i].second);
-  }
-  return k_closest;
+  // Create an indexes array with all of the indexes
+  std::vector<int> indexes(distances.size());
+  std::iota(indexes.begin(), indexes.end(), 0);
+  // Sort the indexes array based on the distances array
+  std::nth_element(indexes.begin(), indexes.begin() + k, indexes.end(),
+    [&](int a, int b){ return distances[a] < distances[b]; });
+  // Only return k elements
+  indexes.resize(k);
+  return indexes;
 }
 
 unsigned char predict_label(const std::vector<unsigned char>& training_labels, std::vector<int>& k_closest){
-  // Get the labels of the k closest
-  std::vector<unsigned char> k_closest_labels;
-  for (size_t i = 0;i<k_closest.size();i++){
-    k_closest_labels.push_back(training_labels[k_closest[(int)i]]);
-  }
-  // Create a map that stores the amount of times a label is present
-  std::map<unsigned char, int> label_counts;
-  for (unsigned char x : k_closest_labels){
-    label_counts[x]++;
+  // Create a list that stores the amount of times a label is present
+  int label_counts[10] = {0};
+  for (int x : k_closest){
+    label_counts[training_labels[x]]++;
   }
   // Find and return the label that has the highest count
-  unsigned char highest_count_label = k_closest_labels[0];
+  int highest_count_label = 0;
   int highest_count = 0;
-  for (const auto& pair : label_counts) {
-    if (pair.second > highest_count) {
-      highest_count = pair.second;
-      highest_count_label = pair.first;
+  for (int i = 0; i < 10; i++) {
+    if (label_counts[i] > highest_count) {
+      highest_count = label_counts[i];
+      highest_count_label = i;
     }
   }
-  return highest_count_label;
+  return static_cast<unsigned char>(highest_count_label);
 }
 
 std::vector<unsigned char> Knn(
@@ -125,25 +108,18 @@ std::vector<unsigned char> Knn(
     test_vectors.push_back(std::move(vec));
   }
 
-  int counter = 0;
-
   // KNN
   // label each test image
-  std::vector<double> distances;
+  std::vector<double> distances(training_images.size());
   for(int i = 0;i<n_test_size;i++){
     // Find the distances to all of the training vectors
     for(int t = 0;t<n_train_size;t++){
-      distances.push_back(minkowski_distance(p, test_vectors[i], training_vectors[t]));
+      distances[t] = minkowski_distance(p, test_vectors[i], training_vectors[t]);
     }
     // find the k closest points to the test point
     std::vector<int> k_closest = find_k_closest(k, distances);
     // Predict a label based on the k_closest
     predicted_test_labels.push_back(predict_label(training_labels, k_closest));
-    counter++;
-    if(counter % 100 == 0){
-      cout << counter << endl;
-    }
-    // cout << counter << endl;
   }
   return predicted_test_labels;
 }
